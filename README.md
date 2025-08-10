@@ -30,8 +30,6 @@ To run the CustomClip application, ensure you have Python installed on your syst
 - **Settings Screen**: Provides options for user preferences (to be implemented).
 - **About Screen**: Displays information about the application.
 
-## Contributing
-Contributions are welcome! Please feel free to submit a pull request or open an issue for any suggestions or improvements.
 
 ## License
 This project is licensed under the MIT License. See the LICENSE file for more details.
