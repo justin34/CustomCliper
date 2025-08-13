@@ -4,19 +4,24 @@ from obswebsocket import obsws
 from ObsIntegration.RequestsObject import requestObject
 from screeninfo import get_monitors
 
+#BZyN8dU4qDEoYxDI
+#\\\\?\\DISPLAY#AOC2702#5&1ca1a46e&0&UID28931#{e6f07b5f-ee97-4a90-b076-33f57bf4eaa7}
+
 
 class ObsController:
-    def __init__(self, file_store_location: str):
+    def __init__(self, file_store_location: str, host: str = "localhost", port: int = 4455, password: str = "", monitor_id: str = None):
         self._file_store_location = file_store_location
 
-        self._host = "localhost"
-        self._port = 4455
-        self._password = "BZyN8dU4qDEoYxDI"
+        self._host = host
+        self._port = port
+        self._password = password
         self._lock = threading.Lock() # Lock for thread safety
         self._sceneName = "CustomClip"
         self._sceneUUID = None
         self._screenCaptureInputName = "MainMonitor"
         self._screenCaptureUUID = None
+
+        self.monitorId = monitor_id
 
         self._originalFileStoreLocation = None
 
@@ -49,8 +54,7 @@ class ObsController:
             #print(self._safe_call(requestObject.GetVersion()).getObsVersion())
             self._sceneUUID = self._safe_call(requestObject.CreateScene(sceneName=self._sceneName)).getSceneUuid()
             print(f"Created Scene with UUID: {self._sceneUUID}")
-            self.monitors = get_monitors()
-            screen_names = [f"{m}" for i, m in enumerate(self.monitors)]
+
             self._screenCaptureUUID = self._safe_call(requestObject.CreateInput(sceneName=self._sceneName, sceneUuid=self._sceneUUID,
                                                         inputName=self._screenCaptureInputName, inputKind="monitor_capture")).getInputUuid()
             print(f"Created Screen Capture Input with UUID: {self._screenCaptureUUID}")
@@ -58,7 +62,7 @@ class ObsController:
             "capture_cursor": True,
             "force_sdr": False,
             "method": 0,
-            "monitor_id": "\\\\?\\DISPLAY#AOC2702#5&1ca1a46e&0&UID28931#{e6f07b5f-ee97-4a90-b076-33f57bf4eaa7}",
+            "monitor_id": self.monitorId,
             "monitor_wgc": 0
             }
             self._safe_call(requestObject.SetInputSettings(inputName=self._screenCaptureInputName, inputUuid=self._screenCaptureUUID, inputSettings=input_settings))
