@@ -1,8 +1,11 @@
 import asyncio
+from datetime import date, datetime
 import time
 import tkinter as tk
 from tkinter import ttk
 import sv_ttk
+from LeagueIntegration.event_listener import EventListener
+from LeagueIntegration.leagueController import LeagueController
 from ObsIntegration.ObsControler import ObsController
 from screens.HomeScreen.home_screen import HomeScreen
 from screens.SettingsScreen.settings_screen import SettingsScreen
@@ -83,13 +86,18 @@ class MainWindow(tk.Tk):
         self.obs_subprocess_controller.start_obs()
 
         self.obs_controller = ObsController(
-            file_store_location="C:/Users/Jabri/Documents/CustomClip/ObsIntegration/",
+            file_store_location="C:/Users/Jabri/Documents/CustomClip/LeagueClips/",
             host=self.obs_connection_info["host"],
             port=self.obs_connection_info["port"],
             password=self.obs_connection_info["password"],
             monitor_id=self.obs_connection_info["monitor_id"]
         )
 
+        self.leagueController = LeagueController(onKillCallback=self.onKillCallback,
+                                                gameEndCallback=self.compileGameClips)
+
+        self.listener = EventListener(callback=self.leagueController.process_event)
+        self.killTimestamps = []
         # Apply modern theme colors
         self.configure_styles()
 
@@ -108,6 +116,10 @@ class MainWindow(tk.Tk):
 
         # Bind the close event to stop OBS
         self.protocol("WM_DELETE_WINDOW", self.on_close)
+    
+    def onKillCallback(self):
+        self.killTimestamps.append(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f"))
+        self.obs_controller.save_replay_buffer()
 
     def configure_styles(self):
         style = ttk.Style()
@@ -155,6 +167,39 @@ class MainWindow(tk.Tk):
         time.sleep(2)
         self.obs_subprocess_controller.stop_obs()
         self.destroy()
+
+    def compileGameClips(self, start_timestamp:date, end_timestamp: date):
+        """
+        Move all video files from the clip directory to a new folder named after the end timestamp.
+        Create a JSON file in the new folder storing the start and end timestamps.
+
+        :param start_timestamp: The start timestamp of the game.
+        :param end_timestamp: The end timestamp of the game.
+        """
+        clip_directory = "C:/Users/Jabri/Documents/CustomClip/LeagueClips/"
+        new_folder = os.path.join(clip_directory, end_timestamp.strftime("%Y-%m-%d_%H-%M-%S"))
+
+        # Create the new folder if it doesn't exist
+        os.makedirs(new_folder, exist_ok=True)
+
+        # Move all video files to the new folder
+        for file_name in os.listdir(clip_directory):
+            file_path = os.path.join(clip_directory, file_name)
+            if os.path.isfile(file_path) and file_name.lower().endswith(('.mp4', '.mkv', '.avi')):
+                new_file_path = os.path.join(new_folder, file_name)
+                os.rename(file_path, new_file_path)
+
+        # Create a JSON file with start and end timestamps
+        metadata = {
+            "start_timestamp": start_timestamp.strftime("%Y-%m-%d_%H-%M-%S"),
+            "kill_timestamps": self.killTimestamps,
+            "end_timestamp": end_timestamp.strftime("%Y-%m-%d_%H-%M-%S")
+        }
+        json_file_path = os.path.join(new_folder, "metadata.json")
+        with open(json_file_path, "w") as json_file:
+            json.dump(metadata, json_file, indent=4)
+
+        print(f"Clips compiled into folder: {new_folder}")
 
 if __name__ == "__main__":
     app = MainWindow()
